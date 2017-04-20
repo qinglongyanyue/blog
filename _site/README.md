@@ -67,3 +67,13 @@ This work is licensed under a [Creative Commons Attribution 4.0 International](h
 [2]: https://github.com/jasonlong
 [3]: http://pages.github.com/
 [4]: https://github.com/jasonlong/cayman-theme
+
+## Welcome
+ 主要分享领域：
+ - 容器存储
+ - 公有云存储
+ - 分布式存储
+ - 文件系统
+ - key value存储
+ - DevOps
+ - 微服务

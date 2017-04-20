@@ -1,0 +1,20 @@
+---
+layout: default
+title:  "Welcome"
+date:   2017-04-20
+categories: main
+---
+
+ 之前一直在daocloud用ghost DIY团队的博客，总体验还算不错，但是由于daocloud改版，容器没事就自己停机了，所以还是决定把blog迁移到github，有人帮忙维护服务，多好啊～
+
+ 主要分享领域：
+ - 容器存储
+ - 云存储
+ - 云计算
+ - 分布式存储
+ - 文件系统
+ - key value存储
+ - Kubernetes
+ - 容器
+ - DevOps
+ - 微服务

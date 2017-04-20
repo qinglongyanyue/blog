@@ -1,0 +1,157 @@
+---
+layout: default
+title:  "阿里云NAS分析"
+date:   2016-05-03
+categories: main
+---
+
+本周终于收到短信通知，获得阿里云NAS试用权。
+
+啥也别说了，登陆上去，申请了最大规格的试用。最大规格也只有500GB。。
+
+## 挂载试用
+
+目前只能支持杭州的数据中心，为了体验高大上的云NAS，无奈又买了个杭州的VM。
+
+Follow指导流程配置好VPC，直接挂载即可。同时支持IP和域名挂载，同时支持NFSv3和NFSv4。
+
+```
+#mount -t nfs -o vers=3,nolock,actimeo=0,proto=tcp,sec=sys,port=2049 192.168.1.2:/ /mnt/ming1
+#mount -t nfs -o vers=3,nolock,actimeo=0,proto=tcp,sec=sys,port=2049 05fa94bc84-mkw61.cn-hangzhou.nas.aliyuncs.com:/ /mnt/ming2/
+#mount -t nfs4 192.168.1.2:/ /mnt/ming3
+```
+
+将NAS挂载到3个目录：
+
+- NFSv3使用IP挂载到/mnt/ming1
+- NFSv3使用域名挂载到/mnt/ming2
+- NFSv4使用IP挂载到/mnt/ming3
+
+3个目录完全share，对于每个目录的操作都是立刻显示到其他目录。效果类似直接把本地ext3挂载在3个目录。
+
+为何NFSv3的需要那么多挂载参数，都是啥意思？
+
+- nolock，停用文件锁，多个节点访问同一个文件可能会有不一致
+- actimeo＝0，关闭读cache，意味着所有的数据&元数据都是远程获取（开启之后对读性能有帮助）
+- sec=sys，属于安全认证的内容，这块我还理解不深
+
+其实挂载参数远不止这几个，只是剩下的都用默认的而已（如下grep命令可以看到所有的参数）：
+```
+＃grep /mnt/ming1 /proc/mounts
+192.168.1.2:/ /mnt/ming1 nfs rw,relatime,vers=3,rsize=1048576,wsize=1048576,namlen=255,acregmin=0,acregmax=0,acdirmin=0,acdirmax=0,hard,nolock,proto=tcp,port=2049,timeo=600,retrans=2,sec=sys,mountaddr=192.168.1.2,mountvers=3,mountport=4002,mountproto=tcp,local_lock=all,addr=192.168.1.2 0 0
+```
+
+NFSv4没有挂载参数，默认是何种方式挂载？
+同样的命令查看，发现参与要少一些。
+
+```
+# grep /mnt/ming3 /proc/mounts
+192.168.1.2:/ /mnt/ming3 nfs4 rw,relatime,vers=4.0,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=192.168.1.1,local_lock=none,addr=192.168.1.2 0 0
+```
+
+## 单节点性能测试
+
+### direct IO（不开client cache）性能测试
+先测试一个VM使用NAS时的性能。
+
+- VM配置：1核，1GB内存（乞丐版配置）
+- VM内存性能；内存带宽大约5GB/s
+- VM网络情况：带宽930Mb/s，大约116MB/s，ping的延迟大约250us
+- 对NFSv3和NFSv4采用同样的方法测试
+
+#### Direct IO的latency
+- 测试方法：直接fio，4KB，队列深度为1，顺序/随机，读写128MB，directIO。
+ - 写延时：1600us，约610 IOPS
+ - 读延时：1100us，约880 IOPS
+ - 随机或者顺序没有差别
+
+#### Direct IO的带宽
+- 测试方法：直接fio，1MB，队列深度为8，顺序，测试30秒，directIO
+ - 写带宽：90MB/s左右
+ - 读带宽：93MB/s左右
+
+#### Direct IO的IOPS
+- 测试方法：直接fio，4KB，随机，测试30秒，directIO
+ - 随机写IOPS：32队列深度达到上限7000，此时平均延迟4.6ms
+ - 随机读IOPS：64队列深度达到上限13800，此时平均延迟9.2ms
+ - 500GB容量能到达这个性能，已经很厉害啦。后端必须是SSD，官方文档也有提到：
+
+>阿里云NAS使用SSD作为存储介质，为应用工作负载提供高吞吐量与IOPS、低时延的存储性能
+
+>NAS存储性能与容量成线性关系，可满足业务增长需要更多容量与存储性能的诉求
+
+### buffer IO 
+
+清空内存的命令
+```
+#free -m
+#sync
+#echo 3 > /proc/sys/vm/drop_caches
+#free -m
+```
+
+#### 查看buffer相关参数
+
+- 查看cache的比率：
+
+```
+#cat /proc/sys/vm/dirty_ratio
+20
+
+即dirty数据最多只能占到20%，超过阈值直接改为写穿，此时会发现性能与directIO差不多
+
+我的VM内存1GB，大约写200MB之后性能直线下降
+```
+
+#### 全buffer IO的latency
+- 测试方法：直接fio，4KB，队列深度为1，顺序，读写128MB
+ - 写延时：4.82us，约18w IOPS
+ - 读延时：70us，约1.4w IOPS
+ - 读的过程中没有任何本地cache命中，都去后端读取了，actimeo＝0起的作用
+ - 过程中内核的预读起了很大作用，刚开始性能低，稳定之后性能高
+
+#### 全buffer IO的带宽
+- 测试方法：直接fio，1MB，队列深度为8，顺序，测试128MB
+ - 写带宽：1GB/s左右，全cache必须高速啊 
+ - 读带宽：60MB/s左右（似乎不支持读cache模式，改了挂载参数也不行）
+ 
+#### 全buffer IO的IOPS
+- 测试方法：直接fio，4KB，随机，测试128MB
+ - 随机写IOPS：32队列深度达到上限14000，此时平均延迟200us
+ - 随机读IOPS：上限880（奇怪了，读性能比directIO要差的多，得分析下）
+
+### 单节点测试结论
+- NFSv3与NFSv4性能差别不大
+- 不过有几个很奇怪的数据：
+ - DirectIO的随机读IOPS远高于bufferIO的随机读IOPS(14000 vs 880)
+ - DirectIO的读带宽也大于bufferIO的带宽（93MB/s vs 60MB/s）
+ - 业界还有个NFStest工具，后面试试多节点并发测试
+
+出现奇怪数据的原因应该就是这个参数`actimeo＝0`，它让读cache完全失效。但是bufferIO的时候又把数据放入了page cache（搬移了无效数据）。
+
+## 几个猜想：
+- 阿里云官方材料提到的三大场景：日志共享，办公，负载均衡集群的共享后端。但是目标显然不只是这么点，否则也没必要基于全SSD弄出这么大动静。
+- 企业办公应该不是主打场景，没有读cache很多体验会比较差。
+- 后端持久化的性能不错，应该适合多节点并发访问（直接directIO的方式使用，这样就无需处理逻辑复杂的前端协议的cache）
+- 全SSD，估计价格不会便宜；可以对照AWS EFS 0.3$/GB/Mouth。
+- （不过EFS一般是跨越3个AZ，阿里云NAS没有看到相关信息）。猜测阿里云NAS最终价格应该低于0.1$/GB/Month。
+- 缺失一些传统NAS的feature，比如快照、克隆，复制，去重压缩等。后续应该会慢慢补齐这些能力。
+
+## 实际场景测试
+###  解压内核代码压缩包
+-  测试环境：前述相同的VM，1C1G
+-  方法：先用NAS的目录，然后用ext4的目录
+-  本地ext4的写延迟和带宽分别为：7us，55MB，比NAS要差；本地ext4的读延时和带宽分别为：800us，55MB
+-  为保证测试公平，每次测试都清空内存
+```
+#tar zxvf linux_3.13.0.orig.tar.gz
+NAS目录时间：9分11秒
+ext4目录的时间：32秒
+#rm -rf linux-3.13
+NAS目录时间：2分47秒
+ext4目录的时间：2秒
+#cp -rf linx-3.13/ /mnt/ming1
+NAS目录时间：5分50秒
+ext4目录时间：1分18秒
+```
+
