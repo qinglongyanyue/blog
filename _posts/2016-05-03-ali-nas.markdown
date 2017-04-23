@@ -2,7 +2,7 @@
 layout: default
 title:  "阿里云NAS分析"
 date:   2016-05-03
-categories: main
+categories: filesystem
 ---
 
 本周终于收到短信通知，获得阿里云NAS试用权。
