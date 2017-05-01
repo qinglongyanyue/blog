@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  
+  <head>
+  <meta charset="UTF-8">
+  <title>分享技术 品味生活</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#157878">
+  <link rel="stylesheet" href="/css/normalize.css">
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/css/cayman.css">
+</head>
+
+  <body>
+    <section class="page-header">
+  <h1 class="project-name">分享技术 品味生活</h1>
+  <h2 class="project-tagline">talk is cheap, show me the code</h2>
+  <a href="https://github.com/qinglongyanyue/blog" class="btn">View on GitHub</a>
+</section>
+
+    <section class="main-content">
+      
+      <p>要设计好任何一个软件，用户视图无疑都是最为关键的，即从用户角度来看是如何使用这个系统的。这里简单总结下最近分析的<a href="http://docs.aws.amazon.com/efs/latest/ug/whatisefs.html">EFS</a>的思路。</p>
+
+<h3 id="几个基本概念">几个基本概念</h3>
+
+<p>对于一个公有云来说，会有很多我们之前没有接触到的概念，包括Region，AZ，Cluster，VPC，sub-Net。</p>
+
+<h4 id="region区域">Region（区域）：</h4>
+<p>全球所有地域的数据中心组成完整的云服务（除了部分地区政策原因无法与其他region交互之外，region之间是需要交互的），每个地域会有多个大型的数据中心。一个地域多个大型数据中心的集合称为一个Region。</p>
+
+<ul>
+  <li>AWS: 目前全球12个Region，还有5个在建
+    <ul>
+      <li>北美4个，南美1个，欧洲2个，亚太5个（包括北京），如下图（括号中为AZ数）</li>
+      <li>其中，中国的Region与其他地区无法互通（政策原因），即中国的数据无法同步到外部。
+  <img src="https://d0.awsstatic.com/global-infrastructure/maps/Global-Infrastructure_1.13.png" alt="AWS" /></li>
+    </ul>
+  </li>
+  <li>Azure: 目前全球19个Region（5个在建），不过他暂时没有明确AZ的概念。
+    <ul>
+      <li>北美5个，南美1个，欧洲2个，亚太9个（包括北京和上海，由世纪互联运营）</li>
+      <li>Azure也在提Zone Redundant Storage 这个概念，主要是指数据在一个region的不同Zone间复制，不知具体情况如何。</li>
+    </ul>
+  </li>
+  <li>阿里云：目前已经建立8个Region（新加坡，香港，深圳，北京，上海，杭州，青岛，美国硅谷）。
+<img src="http://photocdn.sohu.com/20150515/mp15168097_1431672410560_1_th.jpeg" alt="阿里云" /></li>
+</ul>
+
+<h4 id="az可用区">AZ（可用区）</h4>
+<p>AZ有独立的供电、独立的网络等，这样假如一个可用区出现问题时也不会影响另外的可用区。在一个区域内，可用区与可用区之间是通过高速网络连接，从而保证有很低的延时。</p>
+
+<p>AZ应该是指同城多个DC的概念，这多个DC用高速网络互连，大约在几KM~几十KM。</p>
+
+<ul>
+  <li>AZ的概念主要来自AWS，Azure似乎不明确（Azure一个region有多个DC，距离在25KM左右，类似AZ）</li>
+  <li>目前AWS一个region的AZ数目主要为2, 3, 5.</li>
+  <li><a href="http://www.cnblogs.com/cmt/p/aliyun-region-availability-zone.html">阿里云也有可用区的概念</a>，AZ数量主要为1-3个（创建VM时，需要手动选择Region和AZ）</li>
+</ul>
+
+<h4 id="cluster集群">Cluster（集群）</h4>
+<p>集群的概念咱们接触的相对比较多，主要指一个AZ内部多个机架组成的一个逻辑集群，集群内部节点网络对称互连（任意两个点都是一样）。</p>
+
+<p>一个集群所有的节点通过分布式软件统一池化，每个节点都能访问其他所有节点。</p>
+
+<p>FusionStorage目前规格是一个集群4096个OSD节点，10240个Client节点。（每个节点12盘，单盘4TB，接近200PB容量）</p>
+
+<p>AWS还没有找到对应的资料。</p>
+
+<p>Azure表示一个集群能支撑20个Rack，每个Rack 18个存储节点，总计360个节点，最大支持30PB容量（来自论文Azure Storage）。</p>
+
+<h4 id="vpc">VPC</h4>
+<p>AWS比较早推出<a href="https://aws.amazon.com/cn/vpc/">VPC</a>这个概念。</p>
+
+<p>VPC是用来架设独立于互联网的子网的，就相当于自己架设一个独立的局域网。然后想连到互联网的话需要自己配置防火墙，路由，网关等。</p>
+
+<p>对于文件服务这种云内部使用的服务，网络隔离非常重要。</p>
+
+<p>VPC一般可以跨多个AZ存在，如下图。</p>
+
+<p><img src="http://docs.aws.amazon.com/efs/latest/ug/images/overview-flow.png" alt="" /></p>
+
+<p>在一个VPC内部，网络是互通的，即同一个VPC的EC2实例可以挂载这个VPC内的任何FS（当然需要FS在VPC内提供mount target，相关于NAS server）。一般一个租户会为自己建立一个独立的VPC，实现网络的隔离。</p>
+
+<h4 id="sub-net"><a href="http://docs.aws.amazon.com/zh_cn/AmazonVPC/latest/UserGuide/VPC_Subnets.html">Sub-Net</a></h4>
+
+<p>连接中AWS对于VPC和Sub-Net都有定义，每个子网都必须完全位于一个可用区域之内，不能跨越多个可用区域。</p>
+
+<p>一般子网会有公有子网（能与外部internet通信）、私有子网（无法与公网通信），仅限VPN子网（数据流会被路由到虚拟专用网关）。</p>
+
+<p>对于文件服务来说，mount target一般会用私有子网，因为文件服务暂时只支持在云数据中心内部使用（后续可以考虑任意地方访问）。</p>
+
+<p>VPC和Sub-Net主要是网络的概念，存储后端的网络可能会继续独立于计算网络，但是存储的前端必然会与VPC和Sub-Net配合，所以还是需要了解的。</p>
+
+<h3 id="如何使用cloud-fs">如何使用Cloud FS</h3>
+<p>这里主要内容参考EFS的User guild有兴趣的同学建议阅读原文。</p>
+
+<h4 id="环境准备">环境准备</h4>
+<ol>
+  <li>注册一个公有云的账号，比如：ming</li>
+  <li>登录个人的管理界面</li>
+  <li>创建一个VM实例并启动（AWS成为EC2），这个VM实例创建时候需要指定Region，AZ，VPC等。
+    <ul>
+      <li>选择镜像</li>
+      <li>选择规格（CPU，Memory等）</li>
+      <li>配置网络，选择默认的VPC，选择子网（可以选择任意一个AZ中的一个子网），也可以新建一个子网。</li>
+      <li>配置安全组</li>
+      <li>启动VM实例</li>
+    </ul>
+  </li>
+</ol>
+
+<h4 id="准备文件系统">准备文件系统</h4>
+<h5 id="创建文件系统">创建文件系统</h5>
+<ol>
+  <li>登录文件系统管理界面或者直接使用cli</li>
+  <li>创建文件系统，选择与前面创建VM相同的VPC</li>
+  <li>选择FS在每个AZ的mount target（如何创建，见后文）</li>
+  <li>创建成功后会获取到FS ID</li>
+  <li>为FS打个tag（取个name），方便对外展示&amp;辨识。</li>
+</ol>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>AWS创建FS的命令为：
+$ aws efs create-file-system \
+--creation-token creation token \
+--region aws-region \
+--profile adminuser
+</code></pre>
+</div>
+<h5 id="创建mount-target">创建mount target</h5>
+<p>VM实例要访问FS，必须通过一个mount target，它负责I/O转发，NAS协议解析，安全策略控制等。</p>
+
+<p>创建mount target步骤如下：</p>
+
+<ol>
+  <li>登录管理界面，或者直接使用cli</li>
+  <li>选择要创建mount target的AZ（建立每个AZ都创建一个，避免VM跨AZ去访问FS）</li>
+  <li>在每个AZ内部：
+    <ul>
+      <li>选择创建mount target的子网</li>
+      <li>让mount target的IP自动配置（AWS是能够自动配置的）</li>
+      <li>选择安全组</li>
+    </ul>
+  </li>
+  <li>启动所有的mount target</li>
+  <li>查看mount target的DNS name，挂载时候需要用这个（通过DNS服务将DNS name转换成mount target的IP）。</li>
+</ol>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>DNS name:
+availability-zone.file-system-id.efs.aws-region.amazonaws.com 
+</code></pre>
+</div>
+
+<div class="highlighter-rouge"><pre class="highlight"><code>AWS创建mount target的命令为：
+$ aws efs create-mount-target \
+--file-system-id file-system-id \
+--subnet-id  subnet-id \
+--security-group ID-of-the-security-group-created-for-mount-target \
+--region aws-region \
+--profile adminuser
+</code></pre>
+</div>
+
+<h4 id="使用文件系统">使用文件系统</h4>
+<ol>
+  <li>挂载FS
+    <ul>
+      <li>用DNS name挂载：用DNS更好，可以永远不变（IP是有可能会变化的）</li>
+      <li>用IP挂载：比较常规的方式，查询VM对应的mount target的IP，然后手动挂载</li>
+      <li>自动挂载：在 /etc/fstab添加对应的FS，VM启动后自动挂载</li>
+    </ul>
+  </li>
+  <li>使用文件系统
+    <ul>
+      <li>对用户进行<a href="http://docs.aws.amazon.com/efs/latest/ug/accessing-fs-nfs-permissions.html">权限设置</a>，创建FS的root user有所有权限，它能设置其他访问者的权限。</li>
+      <li>统计信息：用户能否看到<a href="http://docs.aws.amazon.com/efs/latest/ug/metered-sizes.html">FS size以及FS的对象size</a>，方便计费。EFS元数据2KB，数据块是4KB的整数倍</li>
+      <li>像一个本地目录一样去操作FS：但是要明确一些<a href="http://docs.aws.amazon.com/efs/latest/ug/nfs4-unsupported-features.html">不支持的操作</a>，比如EFS就不支持强制锁，有访问冲突时需要用户自己去加锁。</li>
+      <li>还有一些<a href="http://docs.aws.amazon.com/efs/latest/ug/limits.html">规格约束</a></li>
+    </ul>
+  </li>
+  <li><a href="http://docs.aws.amazon.com/efs/latest/ug/wt2-apache-web-server.html">使用案例</a></li>
+  <li>备份FS：EFS能够将文件系统备份到另外一个EFS文件系统。使用AWS的Data pipeline技术。并不是文件系统到S3的备份模式（这块可以考虑与混合云多交流下）。</li>
+  <li>EFS的一些<a href="http://docs.aws.amazon.com/efs/latest/ug/api-reference.html">管理API</a></li>
+</ol>
+
+<h4 id="清理文件系统">清理文件系统</h4>
+<p>任何时候都要记得操作的对称性：</p>
+<ol>
+  <li>卸载文件系统</li>
+  <li>删除挂载点</li>
+  <li>删除文件系统：永久删除和回收站</li>
+  <li>删除VM实例</li>
+</ol>
+
+
+      <footer class="site-footer">
+  <span class="site-footer-owner"><a href="http://localhost:4000">分享技术 品味生活</a> is maintained by <a href="l.ming@huawei.com">Author mingliang</a>.</span>
+  <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a>.</span>
+</footer>
+
+
+    </section>
+
+  </body>
+</html>

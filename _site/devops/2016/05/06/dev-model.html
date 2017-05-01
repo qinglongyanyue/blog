@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  
+  <head>
+  <meta charset="UTF-8">
+  <title>分享技术 品味生活</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#157878">
+  <link rel="stylesheet" href="/css/normalize.css">
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/css/cayman.css">
+</head>
+
+  <body>
+    <section class="page-header">
+  <h1 class="project-name">分享技术 品味生活</h1>
+  <h2 class="project-tagline">talk is cheap, show me the code</h2>
+  <a href="https://github.com/qinglongyanyue/blog" class="btn">View on GitHub</a>
+</section>
+
+    <section class="main-content">
+      
+      <p>程序猿们的快乐生活</p>
+
+<p><img src="/assets/timg.jpeg" alt="" /></p>
+
+<ul>
+  <li>
+    <p>在面朝大海，春暖花开的房子里睡到自然醒。</p>
+  </li>
+  <li>
+    <p>打开macbook，登陆codeclub，看看关注的几个project最新动态，给大牛们点几个赞。</p>
+  </li>
+  <li>
+    <p>进入自己的project，查看issue列表，挑个紧急的（或者顺眼的），比如issue11，打开番茄时钟，new一个新的branch issue11，开始coding。本地编译，单元测试OK之后，push branch到codeclub。</p>
+  </li>
+</ul>
+
+<p><img src="/assets/dev-model-1.png" alt="" /></p>
+
+<ul>
+  <li>push上去自动触发持续集成，持续集成（CI）工具开始工作：</li>
+  <li>自动找个空闲的VM环境，git clone代码，构建容器镜像</li>
+  <li>
+    <p>启动容器，开始代码静态检查，编译，自动化测试等，通过之后将容器镜像发布到registery——<strong>应用商店</strong>。</p>
+  </li>
+  <li>接着持续部署工具（CD）开始启动：</li>
+  <li>单机hello world类应用，直接找个地方（cloud，VM或物理服务器）启动一个容器完事。</li>
+  <li>需要依赖周边服务的应用，在部署之前需要到周边服务中创建自己的租户服务。</li>
+  <li>部署完成之后，把新的服务申请加入<strong>服务商店</strong>，对于老服务的修改请在服务描述页面阐述修改内容。</li>
+</ul>
+
+<p><img src="/assets/dev-model-2.jpg" alt="" /></p>
+
+<p>我们看到了2个加粗的关键词，分别是应用商店和服务商店。</p>
+
+<h3 id="应用商店">应用商店：</h3>
+
+<ul>
+  <li>持续集成产生的容器镜像包放入应用商店，非常类似apple的APP store的概念。只是这些都是企业的后端应用，当然也不排除以后IOS支持容器，也可以把mysql跑在iphone中。</li>
+</ul>
+
+<p><img src="/assets/dev-model-3.png" alt="" /></p>
+
+<ul>
+  <li>简单的应用可以直接通过界面点击，部署到一个集群N个容器中（需要指定每个容器的资源约束）</li>
+  <li>复杂的应用，比如需要依赖第三方服务的，先创建第三方服务实例。部署的时候需要配置环境变量，连接对应的服务。比如mysql服务。</li>
+  <li>更复杂的应用，比如内部包括多种不同的微服务，相互还有依赖关系的，需要走K8S或Swarm来搞定。这个高级货我还没玩过，谁找空玩玩？</li>
+  <li>其实简单方案也可以先部署底层微服务，然后上层微服务过来创建自己的实例（或者租户）。一层一层部署上去即可，类似第2个方案。</li>
+  <li>应用部署完成之后，可以提供服务（比如ghost或者piwigo之类）。</li>
+  <li>但是中间任何一个服务出问题，都需要自己去维护，压力山大。</li>
+  <li>
+    <p>好容易买了云服务，结果实际上只买了一个厨房而已，菜都得自己做。</p>
+  </li>
+  <li>其实dockerhub就是这个玩意，daocloud也有一些认证的镜像(各种镜像水平参差不齐，daocloud认证过的要好用的多)</li>
+</ul>
+
+<p><img src="/assets/dev-model-4.png" alt="" /></p>
+
+<ul>
+  <li>rancher也有，相对来说支持的东西更全更多一些(包括K8S和Swarm)，完全开源，可以自己搭建</li>
+</ul>
+
+<p><img src="/assets/dev-model-5.png" alt="" /></p>
+
+<h3 id="服务商店">服务商店：</h3>
+
+<ul>
+  <li>对于手机app来说，app store应该是足够的</li>
+  <li>手机app很明确，都是单机应用，就是安装在本地的手机中，只依赖IOS和android，无需调度。</li>
+  <li>手机app挂了，只影响一个终端用户。而且对于终端用户来说app就是本地的服务，无需依赖其它远程服务（依赖的远程服务直接写死在app中了，无需灵活的配置，无需自己部署）。</li>
+  <li>所以对于手机终端来说，只有APP store，并没有service
+store</li>
+  <li>而对于复杂高端的后端应用（互联网的后端）来说，情况完全不一样了</li>
+  <li>一个牛逼的后端，需要支持几亿级别的用户</li>
+  <li>大规模的分布式系统，需要依赖各种服务，包括LB，DB，NoSQL，分布式cache，分布式FS，s3类对象存储，分布式高可用服务等。</li>
+  <li>需要强大的分析能力，此时需要消息队列，Hadoop生态的组件，日志分析工具，监控工具等</li>
+  <li>需要牛逼的基础公共组件，rest通信，RPC，message，无锁队列，内存管理，DPDK／SPDK，NVMe/NoF，RDMA等。</li>
+  <li>规模巨大，但是以分布式软件为核心，基本都是标准硬件</li>
+  <li>特点是自建自用，一般也不考虑标准化之类的。</li>
+  <li>上面说的是一般互联网的数据中心，那么传统企业数据中心是啥样的：</li>
+  <li>各类前端（比如银行的ATM，深圳市政府汽车摇号，违章查询，12306等），特点就是界面很丑，怀疑都是外包做的？</li>
+  <li>后端是各类业务系统，比如银行的账务系统，12306的web服务等</li>
+  <li>基础设施基本都是直接采购的大厂产品，组成异常复杂：Oracle/IBM／MS的数据库，OS是AIX/Solaris/Windows server／Linux等，HP/DELL/IBM／联想的大机/小机／服务器，EMC／NetApp/IBM/HDS的阵列，CISCO/Juniper／H3C／Huawei的网络设备，还有F5/Cisco的负载均衡设备。一般每一类设备都有专业认证的管理员，负责设备管理和日常基本运维（也会购买企业专业的service）。特点就是东西巨多，巨贵，巨复杂。</li>
+  <li>各种复杂的标准协议：只谈存储就有NFS，ISCSI，FC，SMB/CIFS，NoF, 多路径等。每个协议还有很多个不同的版本，每家的实现可能还有差异，总之就是不想让你懂。</li>
+  <li>为了搞定企业数据中心的这种复杂性：出了融合基础设施（CI，比如VCE）和超融合基础设施的概念(HCI，比如Nutanix)。希望简化企业数据中心的复杂性。但是这是方案本质上还是卖产品，于是在互联网以服务为核心的技术的推动下，企业IT基础设施的新时代来临了——<strong>就是云计算</strong></li>
+  <li>简单谈下云计算</li>
+  <li>AWS，阿里云等通过互联网领域的运营积累获取大量互联网等新兴创业公司的客户(屌丝客户)。但是面对IT基础设施蛋糕最大的企业市场（高富帅），互联网云厂商有大量无法解决的问题。AWS可能把整个企业数据中心生态链重新开发一遍（AWS的EFS和Aurora就是解决企业上云做的）？还真有可能。</li>
+  <li>传统的IT厂商的云服务似乎致力于大企业私有云，比如VMware，IBM，HP，包括huawei等。他们弱点是亲自没有运营大型数据中心的经验，优势是懂企业。目前的格局来看，这些企业是落后的，但是并不意味着没有机会。关键是在企业上云的过程中找准自己的定位，为企业创造价值。混合云可能是个不错的机会？</li>
+</ul>
+
+<p>YY半边，结果怎么扯到云计算了，汗。。</p>
+
+<ul>
+  <li>回到主题：服务商店</li>
+  <li>一个云厂商，必须要在公司外部提供用户级别的大服务商店，包括EC2，EBS，EFS，S3，LB，Cache，DB等；</li>
+  <li>也必须在内部提供基础组件粒度的微服务商店，包括分布式pool服务，元数据服务，高可用服务，安全服务，接口服务，复制服务，分布式锁服务等。</li>
+  <li>用服务化的理念端到端打通，否则客户感知的可能不会服务，感知到的只是多个产品的拼凑而已。</li>
+  <li>
+    <p>如果只是以多个产品拼凑来提供云服务，那么客户提个很小的个性化诉求都会使得后端产品版本需要：排期，开发，测试，发布，安装部署，升级（中间需要经历N个不同的团队）。等到黄花菜都凉了，服务还没ready。。这能叫服务？我到餐馆，点个菜，说要多给点盐，结果一年后才端上来。想想这种服务感受吧。。</p>
+  </li>
+  <li>服务化时代如何做开发</li>
+  <li>程序猿们，需要利用各种第三方微服务，创建自己的程序</li>
+  <li>
+    <p>将自己的程序run起来，再提供服务，服务大家</p>
+  </li>
+  <li>服务化时代需要哪些东东</li>
+  <li>在服务化时代，服务种类多种多样，质量千差万别，如何适合高质量的服务变成了一个关键的活。</li>
+  <li>是故，服务注册/发现，服务排名，服务编排，服务跑分等将会大有价值，必然会有新的这类创业公司涌现。</li>
+  <li>服务化之后，整个管理将会非常复杂。应用的性能也会变得难以预期，上线一个业务的时候，如何申请微服务资源也是个巨大的难题。QoS控制也会是个巨大的坑。</li>
+</ul>
+
+<h3 id="继续yy">继续YY</h3>
+<ul>
+  <li>可能一个微服务只有一个或者少数几个程序猿负责，他们可以为全世界的开发者提供微服务。如同在github给全世界share代码一样。把微服务run在云上，此事很容易达成。需要强大CI/CD工具来支持。</li>
+  <li>众多的微服务如何竞争？会有专业的跑分机构？安兔兔？Gartner？</li>
+  <li>微服务对世界开放之后，每个微服务都需要搞定全栈。预计这些全栈会有PaaS提供商来帮忙。包括安全认证，网络控制，负载均衡，性能监控等。</li>
+</ul>
+
+
+      <footer class="site-footer">
+  <span class="site-footer-owner"><a href="http://localhost:4000">分享技术 品味生活</a> is maintained by <a href="l.ming@huawei.com">Author mingliang</a>.</span>
+  <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a>.</span>
+</footer>
+
+
+    </section>
+
+  </body>
+</html>

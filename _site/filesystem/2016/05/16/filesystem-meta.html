@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  
+  <head>
+  <meta charset="UTF-8">
+  <title>分享技术 品味生活</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#157878">
+  <link rel="stylesheet" href="/css/normalize.css">
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/css/cayman.css">
+</head>
+
+  <body>
+    <section class="page-header">
+  <h1 class="project-name">分享技术 品味生活</h1>
+  <h2 class="project-tagline">talk is cheap, show me the code</h2>
+  <a href="https://github.com/qinglongyanyue/blog" class="btn">View on GitHub</a>
+</section>
+
+    <section class="main-content">
+      
+      <h2 id="文件系统元数据分类">文件系统元数据分类</h2>
+<p>一般的文件系统会有三类元数据：</p>
+
+<ul>
+  <li>系统元数据：超级块，集群信息等</li>
+  <li>FS元数据：1）名字空间元数据，即目录树；2）文件基础元数据：inode相关的元数据</li>
+  <li>空间映射元数据：文件到块的映射，或者文件到对象的映射</li>
+</ul>
+
+<h2 id="panfs">panFS</h2>
+<p>总体架构图：</p>
+
+<p><img src="/assets/file-meta-1.png" alt="" /></p>
+
+<ul>
+  <li>OSDFS（单盘布局）负责管理空间物理空间映射</li>
+  <li>从一组OSD（一个file的多个分条）中，选择2个以副本的方式存放文件基础元数据(存在对象的属性中)</li>
+  <li>目录也是一个文件，不过它存放的是该目录下的文件列表，以三元组的方式存放&lt;serviceID, PartitionID, ObjectID&gt;; serviceID代表服务它的MDS，partitionID就是我们的逻辑poolid，objectIO就是我们的key。目录文件以RAID1的方式存放，提高效率。</li>
+  <li>对于目录，客户端能够read，cache以及解析。或者client可以直接发送lookup RPC请求到MDS，通过文件名找到对应的&lt;serviceID, PartitionID, ObjectID&gt;以及OSDIDs。然后找对应的MDS提供元数据。当存放元数据的2个OSD都不可用的时候，MDS需要广播getattr命令到所有的OSD去获取元数据。</li>
+</ul>
+
+<h3 id="fs元数据">FS元数据</h3>
+<p>基本的元数据操作流程图(创建一个文件)：</p>
+
+<p><img src="/assets/file-meta-2.png" alt="" /></p>
+
+<ul>
+  <li>MDS有个操作日志（oplog）；创建文件时，记录创建对象和更新父目录。这个日志能够回滚和前行，如果没有给ack，直接回滚；如果已经给了ack，则需要前进。</li>
+  <li>MDS还有个写权限（写锁）日志（caplog），创建文件时候可以返回写锁，或者主动申请写锁。写完成之后，释放写锁，此时删除caplog中的写锁。写锁可以缓存在client，避免每次IO都来申请。</li>
+  <li>日志实现在一个高效的保电内存中（3us延迟）；这个日志还可以配置成主备模式(GE网)，此时延迟大约90us。软件故障主要从本地log恢复，硬件故障需要从备中恢复。</li>
+  <li>如果日志不配置能主备，在一个log损坏时，可能会导致数据不一致。不过这些不一致很容易修复，比如正在读写的过程中发现了就顺路修复；也可以把一些疑似的文件隔离，抽空做一次离线的恢复流程。</li>
+  <li>整个创建操作流程如下:
+    <ol>
+      <li>将创建请求发给MDS</li>
+      <li>在日志记录创建对象（2个元数据对象,RAID1）和更新父目录的信息（操作的所有信息）</li>
+      <li>创建文件的元数据对象</li>
+      <li>加写锁，并记录到日志</li>
+      <li>把对父目录的修改放到reply log，方便batch</li>
+      <li>对client返回成功</li>
+      <li>把batch到的多个父目录修改一起持久化下去</li>
+      <li>删除oplog</li>
+      <li>caplog在释放锁的时候删除</li>
+    </ol>
+  </li>
+</ul>
+
+<h3 id="系统元数据">系统元数据</h3>
+<ul>
+  <li>一种方案是直接存在后端的对象中去，问题是在存储pool出问题的时候，整个系统不可管理。</li>
+  <li>另外一种方案是多个系统管理进程存放一个副本到本地的数据库，berkleyDB。多个manager之间使用Paxos协议同步。</li>
+</ul>
+
+<p>PanFS选择了第二种，管理信息包括：</p>
+
+<ul>
+  <li>静态信息：集群中的各个节点信息；用户账号密码等。</li>
+  <li>动态信息：每个服务的状态；</li>
+</ul>
+
+<h3 id="空间管理元数据">空间管理元数据</h3>
+<p>直接卸载到OSDFS（local盘管理软件），应该就是改造过的本地的FS，与很多主流系统类似。</p>
+
+<h2 id="glusterfs">GlusterFS</h2>
+<p>Glusterfs的特点：</p>
+
+<ul>
+  <li>消除元数据</li>
+  <li>有效的分布数据确保扩展性和可靠性</li>
+  <li>最大化性能</li>
+</ul>
+
+<p><img src="/assets/file-meta-3.png" alt="" /></p>
+
+<h3 id="元数据管理">元数据管理</h3>
+<p>网上有篇文章讲解了<a href="http://moo.nac.uci.edu/~hjm/fs/An_Introduction_To_Gluster_ArchitectureV7_110708.pdf">glusterfs的设计思路</a>.</p>
+
+<p>一般分为集中式元数据管理和分布式元数据管理：</p>
+
+<p>集中式如图：</p>
+
+<p><img src="/assets/file-meta-4.png" alt="" /></p>
+
+<p>分布式元数据管理的一种方案（每个节点存放全局元数据）如图：</p>
+
+<p><img src="/assets/file-meta-5.png" alt="" /></p>
+
+<p>Glusterfs的方案：</p>
+
+<p><img src="/assets/file-meta-6.png" alt="" /></p>
+
+<ul>
+  <li>没有集中的元数据服务，也没有独立分布式的元数据服务器。即元数据管理并不是独立的。</li>
+  <li>集群中的每个server都能不经过第三方查找，而定位到所需的元数据信息；而是通过算法（Elastic Hashing Algorithm）</li>
+  <li>通过路径名＋文件名＋节点视图即可定位到文件的具体位置。</li>
+</ul>
+
+<p>通过算法的好处：</p>
+
+<ul>
+  <li>直接算出来元数据的位置，效率高</li>
+  <li>某一条元数据只在一个地方管理，没有多点同步开销</li>
+  <li>不会存在旧的元数据版本的问题（同一个元数据放在多个地方可能就会有这个问题）</li>
+</ul>
+
+<h4 id="分布式元数据管理的问题">分布式元数据管理的问题</h4>
+<ul>
+  <li>性能开销：分布式锁，分布式事务之类的问题</li>
+  <li>可靠性问题：元数据down掉之后</li>
+</ul>
+
+<h4 id="关于元数据管理的一些讨论">关于元数据管理的一些讨论</h4>
+<ul>
+  <li>如何在线扩容之类，其实完全类似dsware扩容的玩法</li>
+  <li>rename，hash类的算法如果rename之后hash值会改变，为了不搬移元数据，对于rename操作直接用新的name link到旧的名字，多了一跳元数据定位。必要的时候可以进行后台搬移。</li>
+  <li>高可用：使用副本的方式，对于每个写操作可以写到多个server上，包括元数据的写。元数据和数据的副本方式应该是一样的。</li>
+  <li>没有提到如何保证一致性和事务性的。个人猜想利用复制技术保证一致性，而每个节点内部的事务性则有FS的本地journal搞定；跨节点的事务如何搞还不清楚。</li>
+</ul>
+
+<h4 id="业界一些分析">业界一些分析</h4>
+
+<p><a href="http://os.51cto.com/art/201403/431809.htm">刘爱贵的文章</a>有一些不错的分析。</p>
+
+<p><a href="http://www.chinacloud.cn/upload/2015-01/15011009251270.pdf">刘爱贵的share材料</a></p>
+
+<p>GlusterFS的哈希分布是以目录为基本单位的，文件的父目录利用扩展属性记录了子卷映射信息，子文件在父目录所属存储服务器中进行分布。</p>
+
+<p><code class="highlighter-rouge">父目录会在所有的节点都有么？如果不是，那和子文件就不一定在一个节点？似乎没有提到分布式事务的概念</code></p>
+
+<p>由于文件目录事先保存了分布信息，因此新增节点不会影响现有文件存储分布，它将从此后的新创建目录开始参与存储分布调度。这种设计，新增节点不需要移动任何文件，但是负载均衡没有平滑处理，老节点负载较重。GlusterFS实现了容量负载均衡功能，可以对已经存在的目录文件进行Rebalance，使得早先创建的老目录可以在新增存储节点上分布，并可对现有文件数据进行迁移实现容量负载均衡。</p>
+
+<p><code class="highlighter-rouge">父目录和子目录不在一个节点，如何搞定分布式事务？</code></p>
+
+<p><a href="http://my.oschina.net/uvwxyz/blog/182224">网上关于各个流程的分析：</a></p>
+
+<p>创建目录的主要步骤有(中间似乎没有事务的概念)：</p>
+
+<ol>
+  <li>根据目录名计算哈希值，由其哈希值所在的hash区间确定hashed卷。</li>
+  <li>向hashed卷下发mkdir操作。</li>
+  <li>待hashed卷返回后，再向除hashed卷之外的所有子卷下发mkdir操作。</li>
+  <li>待所有子卷均返回后，合并目录属性。</li>
+  <li>为每个子卷在该目录上分配hash区间。</li>
+  <li>将各自的hash区间写入子卷上该目录的扩展属性中。</li>
+  <li>创建目录结束。</li>
+</ol>
+
+
+      <footer class="site-footer">
+  <span class="site-footer-owner"><a href="http://localhost:4000">分享技术 品味生活</a> is maintained by <a href="l.ming@huawei.com">Author mingliang</a>.</span>
+  <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a>.</span>
+</footer>
+
+
+    </section>
+
+  </body>
+</html>
