@@ -7,7 +7,7 @@ categories: devops
 
 程序猿们的快乐生活
 
-![](/assets/timg.jpeg)
+![]({{ site.baseurl }}/assets/timg.jpeg)
 
 - 在面朝大海，春暖花开的房子里睡到自然醒。
 
@@ -15,7 +15,7 @@ categories: devops
 
 - 进入自己的project，查看issue列表，挑个紧急的（或者顺眼的），比如issue11，打开番茄时钟，new一个新的branch issue11，开始coding。本地编译，单元测试OK之后，push branch到codeclub。
 
-![](/assets/dev-model-1.png)
+![]({{ site.baseurl }}/assets/dev-model-1.png)
 
 
 - push上去自动触发持续集成，持续集成（CI）工具开始工作：
@@ -27,7 +27,7 @@ categories: devops
  - 需要依赖周边服务的应用，在部署之前需要到周边服务中创建自己的租户服务。
  - 部署完成之后，把新的服务申请加入**服务商店**，对于老服务的修改请在服务描述页面阐述修改内容。
 
-![](/assets/dev-model-2.jpg)
+![]({{ site.baseurl }}/assets/dev-model-2.jpg)
 
 我们看到了2个加粗的关键词，分别是应用商店和服务商店。
 
@@ -35,7 +35,7 @@ categories: devops
 
 - 持续集成产生的容器镜像包放入应用商店，非常类似apple的APP store的概念。只是这些都是企业的后端应用，当然也不排除以后IOS支持容器，也可以把mysql跑在iphone中。
 
-![](/assets/dev-model-3.png)
+![]({{ site.baseurl }}/assets/dev-model-3.png)
 
 
 - 简单的应用可以直接通过界面点击，部署到一个集群N个容器中（需要指定每个容器的资源约束）
@@ -48,11 +48,11 @@ categories: devops
 
 - 其实dockerhub就是这个玩意，daocloud也有一些认证的镜像(各种镜像水平参差不齐，daocloud认证过的要好用的多)
 
-![](/assets/dev-model-4.png)
+![]({{ site.baseurl }}/assets/dev-model-4.png)
 
 - rancher也有，相对来说支持的东西更全更多一些(包括K8S和Swarm)，完全开源，可以自己搭建
 
-![](/assets/dev-model-5.png)
+![]({{ site.baseurl }}/assets/dev-model-5.png)
 
 ### 服务商店：
 

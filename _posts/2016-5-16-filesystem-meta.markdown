@@ -15,7 +15,7 @@ categories: filesystem
 ## panFS
 总体架构图：
 
-![](/assets/file-meta-1.png)
+![]({{ site.baseurl }}/assets/file-meta-1.png)
 
 - OSDFS（单盘布局）负责管理空间物理空间映射
 - 从一组OSD（一个file的多个分条）中，选择2个以副本的方式存放文件基础元数据(存在对象的属性中)
@@ -25,7 +25,7 @@ categories: filesystem
 ### FS元数据
 基本的元数据操作流程图(创建一个文件)：
 
-![](/assets/file-meta-2.png)
+![]({{ site.baseurl }}/assets/file-meta-2.png)
 
 - MDS有个操作日志（oplog）；创建文件时，记录创建对象和更新父目录。这个日志能够回滚和前行，如果没有给ack，直接回滚；如果已经给了ack，则需要前进。
 - MDS还有个写权限（写锁）日志（caplog），创建文件时候可以返回写锁，或者主动申请写锁。写完成之后，释放写锁，此时删除caplog中的写锁。写锁可以缓存在client，避免每次IO都来申请。
@@ -62,7 +62,7 @@ Glusterfs的特点：
 - 有效的分布数据确保扩展性和可靠性
 - 最大化性能
 
-![](/assets/file-meta-3.png)
+![]({{ site.baseurl }}/assets/file-meta-3.png)
 
 ### 元数据管理
 网上有篇文章讲解了[glusterfs的设计思路](http://moo.nac.uci.edu/~hjm/fs/An_Introduction_To_Gluster_ArchitectureV7_110708.pdf).
@@ -71,15 +71,15 @@ Glusterfs的特点：
 
 集中式如图：
 
-![](/assets/file-meta-4.png)
+![]({{ site.baseurl }}/assets/file-meta-4.png)
 
 分布式元数据管理的一种方案（每个节点存放全局元数据）如图：
 
-![](/assets/file-meta-5.png)
+![]({{ site.baseurl }}/assets/file-meta-5.png)
 
 Glusterfs的方案：
 
-![](/assets/file-meta-6.png)
+![]({{ site.baseurl }}/assets/file-meta-6.png)
 
 - 没有集中的元数据服务，也没有独立分布式的元数据服务器。即元数据管理并不是独立的。
 - 集群中的每个server都能不经过第三方查找，而定位到所需的元数据信息；而是通过算法（Elastic Hashing Algorithm）
