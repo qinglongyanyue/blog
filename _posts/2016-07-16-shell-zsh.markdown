@@ -1,0 +1,101 @@
+---
+layout: default
+title:  "zsh配置"
+date:   2016-07-16
+categories: main
+---
+
+
+玩了这么久Linux，一直都是使用默认的shell，ubuntu默认就是bash，确实比较成熟，但是总感觉太不酷了。
+
+在很多地方看到过别人推荐zsh，号称终极shell，提升研发效率必备，于是安装一个玩玩。
+
+关键是OSX，Linux，各种unix都通用，无缝切换。
+
+其中池老师专门写文章做了介绍，[终极shell](http://macshuo.com/?p=676)。
+
+网上也有不少人总结出来[它的10大优点](http://shanker.blog.51cto.com/1189689/1765036)。
+
+## 安装zsh
+- ubuntu下直接apt-get install zsh
+- 将zsh设置为默认shell
+```
+#vim /etc/shell
+/bin/sh
+/bin/dash
+/bin/bash
+/bin/rbash
+/bin/zsh
+/usr/bin/zsh
+#chsh -s /usr/bin/zsh
+```
+
+安装zsh非常简单，但是要配置它却巨复杂，于是一位好事的程序员在使用zsh过程中，把自己的配置方式share了出来，并最终成为推动zsh普及的关键人物，所以说程序员改变世界啊。
+
+## 安装oh-my-zsh
+
+直接到[github官方](https://github.com/robbyrussell/oh-my-zsh)看readme，超级easy。
+
+- 安装：
+```
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+```
+
+- 配置：
+```
+#vim /root/.zshrc
+
+#默认主题
+ZSH_THEME="robbyrussell"//比较简洁
+
+＃比较多人用的主题
+ZSH_THEME="agnoster" //看起来炫酷一些
+
+# 添加插件
+plugins=(git autojump python) //oh-my-shell有非常多的插件，还没玩清楚
+
+所有的插件信息在/root/.oh-my-zsh/plugins目录中，有200多个插件，都玩会也不容易啊，找空摸下各几个主流的插件。。
+
+其中git插件能够现实当前的分支情况，并且把git的操作都用简化词，比如git br代表git branch，可以根据自己习惯修改。
+
+python进去看了下，比较简单:
+# Find python file
+alias pyfind='find . -name "*.py"'
+# Grep among .py files
+alias pygrep='grep --include="*.py"'
+
+分别用pyfind和pygrep提升搜索的效率（少打几个字符）。
+
+
+autojump插件很有意思，下面再单独讲下。
+```
+
+- 安装autojump(其他插件都可以直接用，autojump需要单独安装下)
+```
+#apt-get install autojump
+
+#vim .zshrc
+把
+[[ -s ~/.autojump/etc/profile.d/autojump.sh ]] && . ~/.autojump/etc/profile.d/autojump.sh
+加入到.zshrc的最后一行
+```
+
+- autojump效果
+ - 直接d，显示近期访问的目录
+```
+#d
+0	/home
+1	/mnt
+2	~
+#1
+直接切换到/mnt目录
+```
+ - 跳转到对应的目录（无需全路径）
+```
+j ho
+直接进入home目录
+```
+
+还有好多其他的好功能，等待发掘，赶紧用起来吧，瞬间感觉酷了好多，bash太土啦。。
+
+

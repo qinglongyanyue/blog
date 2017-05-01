@@ -148,3 +148,71 @@ $ aws efs create-mount-target \
 2. 删除挂载点
 3. 删除文件系统：永久删除和回收站
 4. 删除VM实例
+
+## 再次测试EFS
+
+上次测试只是从2个AZ进行了测试，这次直接三个AZ全部测试下，重点关注延迟。IOPS由于QoS控制测不出来效果。
+
+## AZ内部测试
+
+三个VM分别写本AZ的target(测试三次)：
+
+AZ1:VM1平均延迟：9.44ms，9.49ms，9.52ms
+AZ2:VM2平均延迟：8.92ms，8.94ms，8.92ms
+AZ3:VM3平均延迟：10.17ms，9.99ms，10.02ms
+
+似乎很明显的阶梯状，AZ2是主，但是为啥AZ1和AZ3差距这么大？
+
+
+三个VM分别写本AZ的target(测试读三次)：
+
+AZ1:VM1平均延迟：2.52ms，2.63ms，2.62ms
+AZ2:VM2平均延迟：2.75ms，2.66ms，2.66ms
+AZ3:VM3平均延迟：2.87ms，2.78ms，2.77ms
+
+单队列读延迟来看，规律不明显，但是VM3似乎要差一点点。100us的样子，我们再看看读的峰值带宽。
+
+AZ1:VM1:104MB/s
+AZ2:VM2:105MB/s
+AZ3:VM3:102MB/s
+
+似乎没有差别，继续看看读IOPS(32队列，4KB随机读)：
+
+AZ1:VM1:6350,7061,7199
+AZ2:VM2:7452,7405,6482
+AZ3:VM3:7463,7451,7317
+
+```
+sudo fio -filename=/mnt/efs1/test -direct=1 -iodepth 32 -thread -rw=randread -ioengine=libaio -bs=4k -numjobs=1 -runtime=30 -group_reporting -name=mytest
+```
+
+## 跨AZ测试
+
+VM1测试各个AZ的性能，写延迟：
+AZ1:9.37ms,9.22ms,9.34ms
+AZ2:9.56ms,9.59ms,9.52ms
+AZ3:10.87ms,10.59ms,10.43ms
+
+与前面数据对比大致可以看出来跨一次AZ延迟大约500us。基本可以确信AZ2就是主。
+
+VM2测试各个AZ的性能，写延迟：
+AZ2:8.91ms,9.04ms,8.92ms
+AZ1:9.77ms,9.83ms,9.69ms
+AZ3:11.38ms,11.1ms,11.04ms
+
+AZ2访问AZ3的性能非常诡异，理论上应该跟AZ1访问AZ3类似啊？
+
+VM3测试各个AZ的性能，写延迟：
+AZ3:9.98ms,10.48ms,9.99ms
+AZ1:9.24ms,9.35ms,9.40ms
+AZ2:9.39ms,9.67ms,9.50ms
+
+VM37-28日测试，写延迟
+AZ3:9.75ms,9.47ms,9.44ms
+AZ1:9.13ms,9.21ms,9.14ms
+AZ2:9.63ms,9.64ms,9.66ms
+
+最后这一组数据非常奇怪，访问本地反而比跨AZ慢，而且访问主反而比访问非主慢？是否AZ3到AZ1的网络比较好？
+
+根据以上数据，基本可以分段推断出一组数据(明天画个延迟分段图)
+

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  
+  <head>
+  <meta charset="UTF-8">
+  <title>分享技术 品味生活</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#157878">
+  <link rel="stylesheet" href="/css/normalize.css">
+  <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="/css/cayman.css">
+</head>
+
+  <body>
+    <section class="page-header">
+  <h1 class="project-name">分享技术 品味生活</h1>
+  <h2 class="project-tagline">talk is cheap, show me the code</h2>
+  <a href="https://github.com/qinglongyanyue/blog" class="btn">View on GitHub</a>
+</section>
+
+    <section class="main-content">
+      
+      <p>cohesity刚刚创立的时候有过一些关注，只是那个时候他的官方网站几乎是一片空白，除了创始人那篇充满情怀的blog。</p>
+
+<p>可惜找不到了，大意就是现在海量的数据爆发的时代，如何存放好这些数据，同时发掘出数据的价值没有任何玩家玩好。既然大家都玩不好，那么让我们来改变世界吧。</p>
+
+<p>于是他从Nutanix（CTO）出来创立了cohesity，从在线的存储的Nutanix，改到二级存储的Cohesity，重点关注发掘数据的价值。而不仅仅是为支持业务提供傻的存储。</p>
+
+<p>今天在登录网站，内容已经非常丰富，产品已经有不少客户了，大牛创业就是快。。不说一个存储要做好至少7年的么，人家咋这么快？</p>
+
+<p>这不，这次已经有了<a href="http://13554-presscdn-0-95.pagely.netdna-cdn.com/library/2015/10/Cohesity-Architecture-WhitePaper.pdf">架构说明书</a>，必须要分析下。</p>
+
+<h3 id="背景">背景</h3>
+
+<p>一开始当然继续大谈情怀：</p>
+
+<ul>
+  <li>数据的不断爆发，使得用户们不再在现有的legacy的方案上不停的补充新的方案，打各种补丁，贴各种创可贴。造成很多问题</li>
+</ul>
+
+<blockquote>
+  <ol>
+    <li>造成数据的孤岛，不同的系统中存在大量的相同数据</li>
+    <li>进一步加剧了数据的爆发</li>
+  </ol>
+</blockquote>
+
+<p>看看当今企业的几个基本诉求：</p>
+
+<ul>
+  <li>保证商业的可持续性的存储，核心业务（想象银行如果没了数据会咋样）</li>
+</ul>
+
+<blockquote>
+  <ol>
+    <li>需要保证数据一致可用，依赖容灾恢复之类的技术。</li>
+    <li>企业一般会有一个主站点，以及一个standby的从站点，从站点基本不用，导致巨大的投资浪费。（容灾解决方案都是非常昂贵的）</li>
+  </ol>
+</blockquote>
+
+<ul>
+  <li>通用的业务（开发测试，web主页，学习等各类支撑系统）</li>
+</ul>
+
+<blockquote>
+  <ol>
+    <li>研发需要一个模拟真实环境的sandbox来验证，测试之类。</li>
+    <li>一般研发环境和生产环境分离，那么又多一份冗余数据和一个个数据孤岛。想想我厂每个team都有众多的各种设备，浪费之严重，触目惊心啊。</li>
+  </ol>
+</blockquote>
+
+<ul>
+  <li>数据分析业务（将IT从成本中心变成价值中心）</li>
+</ul>
+
+<blockquote>
+  <ol>
+    <li>大数据已经喊了很多年，说的就是这块。</li>
+    <li>从一大堆的数据里面，实时的分析出有价值的信息将会更加有利于帮助企业决策。</li>
+    <li>比如我们team可以将应用的负载信息收集起来进行分析，帮助我们做技术决策，而不是像现在这样去YY客户的诉求。</li>
+    <li>企业可以买强大同时支持在线业务和分析的高性能存储，或者使用一个data lake的解决方案（即把海量的数据往一个巨大的存储池扔）</li>
+    <li>当今数据中心架构异常复杂，存放，管理，保护这些数据变得极其复杂，更别说去分析这些数据啦。</li>
+    <li>cohesity将企业存储分为2类，一类是在线业务的存储，一类是二级海量存储。</li>
+  </ol>
+</blockquote>
+
+<h3 id="用cohesity让数据变得有序和优雅">用cohesity让数据变得有序和优雅</h3>
+
+<p>cohesity是为了消除数据碎片，或者叫数据孤岛而设计的。让不停给IT系统打补丁的时代消失吧，cohesity生来就是为了构建世界上最有效最灵活的数据解决方案。商用硬件＋智能可扩展的软件。让CIO不用在考虑传统的存储如何满足未来的诉求，而是把目光集中在企业的核心业务上。</p>
+
+<h4 id="c2000系列平台">C2000系列平台</h4>
+
+<ul>
+  <li>C2300:48TB raw空间，3.2TB flash，2U</li>
+  <li>C2500:95TB raw空间，6.4TB flash，2U</li>
+  <li>block: 一个block支持4个node，一个C2300或者C2500就是一个block</li>
+  <li>每个node：2个8核V3的CPU，64RAM，2个10GE SFP＋网口，2个1GE网口，以及管理接口</li>
+  <li>扩展性：3节点起步，扩展到无限大，性能和容量都是线性扩展</li>
+</ul>
+
+<h2 id="cohesity架构cohesity称为oasis">cohesity架构（cohesity称为OASIS）</h2>
+
+<p>cohesity的目标是实现一个无敌的，无限扩展的巨大文件系统，在文件系统之上能够轻易整合一些应用进来。内部天然支持下列应用（喜欢它把一切上层特性都叫做application，明确了cohesity的平台属性）：</p>
+
+<ul>
+  <li>数据保护</li>
+  <li>复制数据管理</li>
+  <li>测试开发devops</li>
+  <li>原生数据分析(inplace分析)</li>
+  <li>自带报表</li>
+</ul>
+
+<p><img src="/assets/cohesity-1.png" alt="" /></p>
+
+<p>从架构来看分了四层：</p>
+
+<ul>
+  <li>最底层是它的盒子</li>
+  <li>通过分布式软件OASIS池化</li>
+  <li>OASIS leverages a purpose-built noSQL store, combined with Paxos protocols, that delivers full consistency with the ability to make decisions rapidly, at massive scale, and without performance penalties.</li>
+  <li>上层补充基本的存储服务</li>
+  <li>最上层根据业务特征，实现针对业务特征的数据服务</li>
+</ul>
+
+<p>下面分别介绍各个层次：</p>
+
+<h3 id="1-oasis">1. OASIS</h3>
+<p>一个无限容量的巨大分布式文件系统，后端基于一个paxos的分布式Nosql DB。强一致，横向扩展，性能无损失。</p>
+
+<p>包括以下几个组件：</p>
+
+<ol>
+  <li>集群管理：
+    <ul>
+      <li>控制所有集群中的各种服务：包括维护各个服务配置信息；网络信息；每个服务的状态信息；号称比当前开源解决方案性能更好，可靠性可用性更高。</li>
+    </ul>
+  </li>
+  <li>I/O引擎
+    <ul>
+      <li>负责IO路径</li>
+      <li>包括SSD写cache，分级存储</li>
+      <li>数据副本</li>
+      <li>读操作需要从分布式元数据存储中获取元数据（即chunk的位置）</li>
+      <li>热点数据放到SSD中</li>
+    </ul>
+  </li>
+  <li>元数据存储
+    <ul>
+      <li>The Metadata Store is a consistent key value store</li>
+      <li>在增加或者删除节点的时候需要做负载均衡</li>
+      <li>元数据用三副本</li>
+      <li>从描述来看，元数据是实用独立的分布式NoSql，类似用cassandra之类的东东</li>
+    </ul>
+  </li>
+  <li>Index引擎
+    <ul>
+      <li>搞定数据分析的问题</li>
+      <li>第一轮扫描：搞定high level的分析；VM名字，文件元数据之类</li>
+      <li>第二轮扫描：扫描出VMDK中的一些文件信息</li>
+      <li>自带索引能够快速的找到用户需要的信息，比如一个VM的所有信息</li>
+    </ul>
+  </li>
+  <li>集成的数据保护引擎
+    <ul>
+      <li>提供一个原生的数据保护的环境</li>
+      <li>能够与VMware的VADP对接,提供端到端的数据保护方案</li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="2-存储服务">2. 存储服务</h3>
+
+<p><img src="/assets/cohesity-2.png" alt="" /></p>
+
+<ul>
+  <li>快照</li>
+  <li>传统快照，快照多了之后会有性能下降，毕竟需要根据快照链追溯</li>
+  <li>chesty的专利技术：能否讲快照的回溯限定在有限的几跳以内。</li>
+  <li>做到file粒度的快照，而不是FS粒度，细节如上图</li>
+</ul>
+
+<p><img src="/assets/cohesity-3.png" alt="" /></p>
+<ul>
+  <li>去重</li>
+  <li>传统的厂商提供文件或者block粒度的去重能力，但是一般都是在单点效果好。</li>
+  <li>cohesity实现整个集群粒度的去重，允许用户配置是先去重，后去重，还是不去重。</li>
+</ul>
+
+<p><img src="/assets/cohesity-4.png" alt="" /></p>
+<ul>
+  <li>智能数据布局</li>
+  <li>客户能自定义副本数</li>
+  <li>数据切割成8K－24KB的chunk（这样架构一个小文件也能利用并发）</li>
+</ul>
+
+<h3 id="3-应用环境">3. 应用环境</h3>
+
+<p>就像run在android的APP一样，chesty的平台也能支持不少App了，只是暂时这些app都是它自己开发的。</p>
+
+<p>当前主要包括三个应用：数据保护，DevOps，分析。</p>
+
+<ul>
+  <li>数据保护</li>
+  <li>无缝与VADP对接，无需再安装独立的</li>
+  <li>
+    <p>特色还是基于它的快照技术来做</p>
+  </li>
+  <li>DevOps</li>
+  <li>通过快照技术能够快速的做出克隆</li>
+  <li>克隆出来的东东可以给测试&amp;开发来用，即保证开发测试与生产环境同一份数据</li>
+</ul>
+
+<p><img src="/assets/cohesity-5.png" alt="" /></p>
+
+<ul>
+  <li>分析</li>
+  <li>存储利用率趋势，用户度量</li>
+  <li>实时的性能统计，数据缩减率，IOPS，延迟等</li>
+  <li>提供一个Analytics Workbench，能够让用户自己run code去分析数据，就像map-reduce那样。就像一个分布式的grep</li>
+</ul>
+
+
+      <footer class="site-footer">
+  <span class="site-footer-owner"><a href="http://localhost:4000">分享技术 品味生活</a> is maintained by <a href="l.ming@huawei.com">Author mingliang</a>.</span>
+  <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a>.</span>
+</footer>
+
+
+    </section>
+
+  </body>
+</html>

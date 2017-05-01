@@ -1,0 +1,39 @@
+---
+layout: default
+title:  "AWS EC2体验"
+date:   2016-07-02
+categories: cloud
+---
+
+- VM配置：规格m3.medium，ubuntu 14.04（其实2个不同的VM，2个AZ就够了）. 为了省钱，选择了带个本地4GB SSD，3.7G内存，中等带宽的网络。
+
+## 先爽下4GB的SSD盘
+
+- 测试工具：IO
+```
+sudo fio -filename=/dev/xvdb -direct=1 -thread -ioengine=libaio -bs=4k -numjobs=1 -runtime=30 -group_reporting -name=mytest  -size=1000M -rw=write -iodepth 1
+```
+
+- 队列深度为1延迟
+  - 230us(写)/58us(读)
+- 随机IOPS(4KB块大小):
+  - 写IOPS：9307，此时延迟：3.4ms（似乎有QoS控制，达到上限）
+  - 读IOPS:41544，此时延迟：3.1ms（到达上限）
+- 顺序带宽（128KB块大小,4GB写满）：
+ - 写带宽：89MB/s
+ - 读带宽：718MB/s
+
+## 在试试EBS SSD的系统卷
+规格说IOPS在300～3000
+
+- 队列深度为1延迟
+  - 575us(写)/184us(读)
+- 随机IOPS(4KB块大小):
+  - 写IOPS：3000，此时延迟：1.3ms（QoS控制，达到上限）
+  - 读IOPS:3000，此时延迟：184us（到达上限）
+- 顺序带宽（128KB块大小）：
+ - 写带宽：40MB/s
+ - 读带宽：70MB/s
+
+
+
