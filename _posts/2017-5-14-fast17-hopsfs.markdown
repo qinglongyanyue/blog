@@ -15,7 +15,7 @@ categories: paper
 
 随着NewSQL DB的快速发展，分布式DB的性能，扩展性，事务性能，新的内存介质，使得我们又得考虑将分布式FS的元数据架在NewSQL之上啦。 
 
-NewSQL多数都是以Google Spanner为蓝本，比如国内做的不错的TiDB，国外的cockroachDB都获得了极大的关注，以及学术界Yale大学的CalvinDB。其实Yale的Alexander Thomson教授在FAST2015就有篇CalvinFS就是基于CalvinDB设计的分布式FS，当前其中更关注跨地域的分布式FS。
+NewSQL多数都是以Google Spanner为蓝本，比如国内做的不错的TiDB，国外的cockroachDB都获得了极大的关注，以及学术界Yale大学的CalvinDB。其实Yale的Alexander Thomson教授在FAST2015就有篇CalvinFS就是基于CalvinDB设计的分布式FS，其中更关注跨地域的分布式FS。
 
 这篇论文更多的关注的集群内部的元数据管理，并且以HDFS的元数据管理为例，阐明了作者的方案的价值。。
 
@@ -28,7 +28,7 @@ NewSQL多数都是以Google Spanner为蓝本，比如国内做的不错的TiDB�
 2. 仍有不少分布式FS将元数据放在单点，比如HDFS；或者将元数据分布式打散放在多个DISK中，比如GPFS，GFS等；或者直接简单将元数据sharding称不同的名字空间，每个名字空间的元数据独立管理。
 3. 现有各种方案都不够完美，如果把元数据放到一个牛逼的分布式数据库搞定多好，支持事务，横向扩展，in-memory处理，SQL语义。但是FS的元数据是树形结构，如何能高效的映射到数据中呢？本文的核心就是搞定这个。
 
-昨天的设计思路通过改造HDFS实现，名为HopsFS，整个方案的核心思路如下：
+总体的设计思路通过改造HDFS实现，名为HopsFS，整个方案的核心思路如下：
 
 >
 1. 将HDFS的元数据存储和服务管理动作分离；使用NewSQL DB存放所有的元数据，NDB，后台是一个基于MySQL的分布式数据库；HopsFS在上层通过多个无状态的节点并发的去访问数据库，通过并发提升性能。
