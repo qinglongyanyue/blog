@@ -95,4 +95,3 @@ Hash: f15bf2b75a525f84b941e51e501d555b1bdc8163
 服务提供者在Storj中叫做farmer，就是比特币中的矿工类似的概念。
 
 ### 安装farmer软件
-
