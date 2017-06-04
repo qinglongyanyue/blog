@@ -1,0 +1,93 @@
+---
+layout: default
+title:  P2P 存储Storj分析
+date:   2017-06-01
+categories: Cloud storage
+---
+
+去年就开始听说有基于区块链的去中心化云存储公司Storj，一直没找个机会试用和分析下。现在边缘计算这么火热，存储的P2P也应该提上日程了，必须玩下Storj试试。
+
+## 1. 体验Storj
+- 界面上有个宣传link，还可以出租自己的个人硬盘空间挣钱，跟迅雷赚钱宝+网心星域CDN的思路似乎有点类似
+- 秒级注册，登录之后界面跟主流的云存储类似，点击按钮创建bucket，但是没有上传和下载的按钮，看样子仅仅是针对程序猿的，仅提供API操作
+- 提供了一个libstorj的工具，在各个平台（linux，windows，macos）都可以用。使用这个命令行工具配置好key之后，就可以用命令行玩对象的操作啦。
+
+总结下Storj的特点：
+- 所有的对象，桶都是加密的，由于是p2p存储，数据安全性是核心，数据只有用户自己能看到，其他任何人无法看到
+- 敲各种复杂的命令行还是感觉比较低效，一切操作都是storj开始，加上动作，比如list-buckets，list-files，remove-file，add-buckets,upload-file等，对于习惯了标准文件系统操作的人还是不太适应。
+
+针对上传的文件，有以下5中模式：
+1. 一个个的上传文件，不在乎操作复杂
+2. 想一口气上传几百个文件
+3. 上传视频和音频，不久后可能还要用
+4. 上传几百个经常用的文件
+5. 上传一个目录
+
+针对每种模式建议不同的玩法：
+- 第1种建议把多个文件打包成一个rar或者zip
+- 第3种视频和音频打包没啥意义，建议用户使用编码器，将视频和音频编码流化（视频通过不同的编码方式压缩）
+- 第2和5建议打包上传
+- 第4个由于要经常用，建议写个脚本去一个个上传
+
+实际上传文件的体验：
+- 上传文件有个prepare阶段，是算hashing的过程(算出对象名 & 加密)
+- 所有的数据默认都是加密上传，性能比较挫，总体是个备份的体验，上面跑业务肯定不太适合
+- 文件名有空格的时候得用括号包起来
+
+数据可靠性保证方式：
+- 每个上传的文件会被切割成为chunks，成为shards
+- 每个shard都会有多个farmer来存储，确保有farmer离线，或者数据损坏时数据不丢失
+- 可以通过list mirror命令告诉用户所有的shards情况，以及每个shards存放在哪个地方
+- 随意上传了一个文件，有一个chunk，提示有5个建立好的connection；19个可用的副本
+
+```
+storj list-mirrors 0f45f46c208277ab68876a04 b482f1f86299f888e3cb25d4
+Unlock passphrase:
+Established
+-----------
+Shard: 0
+Hash: f15bf2b75a525f84b941e51e501d555b1bdc8163
+	storj://104.196.40.187:4000/f19a09031599c2fbcdf9013117b6057793f35346
+	storj://45.29.223.16:46639/f10244678b9766fe978f7764f8d86dd5e706a6b5
+	storj://216.36.9.54:4000/f12f4532ea499170728aaedfe4ebe90b56daee0a
+	storj://104.57.185.88:4010/f09c896ea3bca400d36eee54a535d7c4c2973ed0
+	storj://45.29.223.16:27509/26699aa34f35622623898ee432557640751ea9c4
+
+Available
+---------
+Shard: 0
+Hash: f15bf2b75a525f84b941e51e501d555b1bdc8163
+	storj://76.65.171.76:4000/f051b9c9542a47ac3c095d8f06eb2ee286c3e5d7
+	storj://realshels.zapto.org:4056/f165eaa507709303f29ad04962890591f8fdfdc5
+	storj://dev.dabesoft.at:4521/f0756b12b82b93fcf46043b1893d4e6fa52379ea
+	storj://clemncy.ddns.net:4011/f0c91e0c6e10b72a42006756953ae7e3f7c918da
+	storj://79.180.28.189:11622/f076120ffddcee5ceefbc468709b3a6dca362b5e
+	storj://74.101.192.180:17727/f09b5fc60d000c3b30ad99263c9b3609fff1ee21
+	storj://50.26.233.248:5005/f0ec3d7b2145c4362c0e8edb6f720a2971fba871
+	storj://jsr.fortiddns.com:31338/f019ed6fa5b941df3e28b19fab2745cc851a787c
+	storj://hdd.siblin.org:16011/f04d13c0a8ffc563df6b632fc78033a7ea95b9af
+	storj://173.216.208.98:32018/f1b815fc081ebfc6f761f7afe5919b9c9727968a
+	storj://51.255.92.188:50051/f01eb136571b9e46f543922cb2b44663fc07055b
+	storj://46.171.139.186:52060/f021c61d6b003b02a050e5b79538ca511c6e3ce7
+	storj://mcallisters.no-ip.org:4000/f0c1e4a21247fafc8c415b10eae366937bfd9e87
+	storj://86.137.222.59:4000/f10f1668ef8c3d9a0407de51bcae106f5fae7904
+	storj://145.236.14.110:4000/f19d449954bb131038bcc0bd70e2431852565b9a
+	storj://212.107.156.226:4000/f0350f78243477f2fb0d2c8122d585290f446443
+	storj://storj.chadaustin.org:21309/f0359c0c6b23ab17bebd21028c259aaed1e4a137
+	storj://91.244.113.103:3366/f12c97336653e2880b3305b11cf448d93911bbb7
+```
+
+### 流化播放一个视频和音频
+- 首先需要一个能够读入流的程序，也就是流播放器，比如VLC
+- 安装好VLC之后，打开文件流化：Storj stream-file <bucket-id> <file-id> | vlc -
+- 缓冲一会就可以直接在线看视频了，而不需要全部下载到本地
+- 有这个技术是否就是P2P视频了？类似pplive之类
+
+### GUI
+- 尽管web界面没有啥功能，但是人家提供了用python写的GUI，方便喜欢图形界面的朋友
+- 可惜只有linux和windows，没有MAC版本：https://github.com/lakewik/storj-gui-client/releases
+
+## 2. 服务提供者
+前面讲的都是作为用户使用Storj的情况，还可以注册成为服务提供商，将自己的空余容量和带宽出租出来。非常类似滴滴的思路，Storj的核心是自己的平台，服务消费者和服务提供者都是第三方，当前他自己一定会有很多种子节点，但是应该大量的访问都是第三方来提供的。
+
+作为用户用起来比较简单，但是作为服务通过者需要更多的东西，找空细致分析下。建议有兴趣的同学玩玩，早期说不定还真可以挣点钱呢。
