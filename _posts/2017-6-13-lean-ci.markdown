@@ -1,6 +1,6 @@
 ---
 layout: default
-title:  "云研发思考——当前的研发流水线"
+title:  "云研发思考——什么是云研发"
 date:   2017-06-13
 categories: devops
 ---
