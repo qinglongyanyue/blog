@@ -1,0 +1,34 @@
+---
+layout: default
+title:  "AWS CDN存储分析"
+date:   2017-06-18
+categories: CDN
+---
+
+AWS的CDN服务叫CloudFront，看名字似乎跟传统的CDN思路不太一样，重点应该是充分利用AWS在世界各地的DC来提供CDN服务，似乎跟运营商网络关系不大。
+
+猜测没啥用，直接进入官方网站分析下吧。
+
+文档地址：http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html
+
+## CloudFront是啥
+
+官方网站介绍如下：
+>Amazon CloudFront 是一个全球性内容分发网络 (CDN) 服务，可通过 CDN 缓存实现网站、API、视频内容或其他 Web 资产的快速分发。它可以与其他 Amazon Web Services 产品集成，让开发人员和企业能够在无最低使用承诺的条件下向最终用户轻松快捷地发布内容。
+
+## CloudFront如何工作
+
+先看几个基本概念：
+- origin server：原始提供服务的机器，比如你的HTTP服务器，S3服务器，视频服务器，web网站服务器等，最新版本的数据都在这里；所有的数据写和更新操作都发生在这里。
+- edge locations：世界各地用来cache你的数据的节点
+
+![](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/images/how-you-configure-cf.png)
+
+操作步骤：
+- 创建一个CloudFront distribution，其中指定origin server以及边缘的设置，比如是否log所有的req，是否立刻生效等
+- CloudFront为这个CloudFront distribution配置一个域名，并在console中展示;使用这个新的域名对外服务即可。
+- CloudFront将配置信息发布到所有的edge locations；之后你的网站就可以被加速啦。
+
+
+
+## CloudFront的存储技术
