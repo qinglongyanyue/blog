@@ -9,7 +9,7 @@ AWS的CDN服务叫CloudFront，看名字似乎跟传统的CDN思路不太一样�
 
 猜测没啥用，直接进入官方网站分析下吧。
 
-文档地址：http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html
+[文档地址](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Introduction.html)
 
 ## CloudFront是啥
 
@@ -19,16 +19,18 @@ AWS的CDN服务叫CloudFront，看名字似乎跟传统的CDN思路不太一样�
 ## CloudFront如何工作
 
 先看几个基本概念：
+
 - origin server：原始提供服务的机器，比如你的HTTP服务器，S3服务器，视频服务器，web网站服务器等，最新版本的数据都在这里；所有的数据写和更新操作都发生在这里。
 - edge locations：世界各地用来cache你的数据的节点
 
 ![](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/images/how-you-configure-cf.png)
 
 操作步骤：
+
 - 创建一个CloudFront distribution，其中指定origin server以及边缘的设置，比如是否log所有的req，是否立刻生效等
 - CloudFront为这个CloudFront distribution配置一个域名，并在console中展示;使用这个新的域名对外服务即可。
 - CloudFront将配置信息发布到所有的edge locations；之后你的网站就可以被加速啦。
 
-
-
 ## CloudFront的存储技术
+
+从CDN的技术分析来看，跟存储似乎关系不大，数据面逻辑相对比较简单，主要是一个纯读的cache，具体细节可能跟ATS类似，数据也不需要保证可靠性。
