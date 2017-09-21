@@ -11,7 +11,7 @@ haystack是facebook比较久的论文了，专业针对互联网图片的存储�
 
 ## 1.1 磁盘布局
 
-![]({{ site.baseurl }}/assets/haystack-1.png
+![]({{ site.baseurl }}/assets/haystack-1.png)
 
 haystack的store file：
 
@@ -53,9 +53,9 @@ haystack的store file：
 
 为了优化reboot的性能，设计一个index file的结构，如果没有这个东西，每次重启都需要扫描整个log file重建内存映射，效率太低。
 
-![]({{ site.baseurl }}/assets/haystack-2.png
+![]({{ site.baseurl }}/assets/haystack-2.png)
 
-![]({{ site.baseurl }}/assets/haystack-3.png
+![]({{ site.baseurl }}/assets/haystack-3.png)
 
 这个index file就是为了快速重建内存映射而设计的。
 
