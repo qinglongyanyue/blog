@@ -1,7 +1,7 @@
 ---
 layout: default
-title:  "DeltaFS分析"
-date:   2017-09-24
+title:  "分布式FS分析"
+date:   2017-10-8
 categories: filesystem
 ---
 
