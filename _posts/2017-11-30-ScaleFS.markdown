@@ -1,0 +1,36 @@
+---
+layout: default
+title:  "ScaleFS分析"
+date:   2017-10-29
+categories: filesystem
+---
+
+ScaleFS是SOSP17，MIT做的一个多核文件系统，简单分析下他的设计方案。
+
+## 总体架构
+
+![]({{ site.baseurl }}/assets/scalefs-1.png)
+
+ScaleFS包括2个FS，一个MEMFS，一个DiskFS。
+
+- MEMFS：使用并发内存数据结构，实现内存操作的多核扩展，让多数操作免锁
+- DISKFS：组织磁盘块，实现空间管理
+
+2个文件系统之间通过一个op-log关联；这个log保存目录的所有变化，包括link，unlink，rename等。当需要刷盘时，直接从oplog收集这些操作，并下盘。
+
+MEMFS与DiskFS相互独立，使用不同的inode号，为了方便区分，文中未mnode代表MEMFS的inode，inode代表DISK中的inode。有个表格记录mnode到inode的映射。
+
+这样使得mnode的分配速度非常快，不需要访问磁盘，比如可以每个核分配一个mnode范围，这样也无需加锁。但是在重启之后，stat就会发现inode有变化。目前来看，依赖inode号不变的应用不多（主要指本地FS，NFS还是必须要inode号的）。
+
+MEMFS包括：
+
+- 一个page cache，每个file使用一个radix array来存放热点数据，脏的写也在这里，通过bitmap标识。
+- 一个dentry hash表，映射文件名到mnode号；这个表是无锁的，对于每个dentry条目的修改是需要加锁的。另外有一篇论文专门讲这个。
+
+DiskFS：
+
+- 实现一个传统的磁盘文件系统，使用物理journal来将修改刷到磁盘中；为了更好的扩展性，DiskFS使用多个物理journal。
+- DiskFS自己也维护一个buffer，缓存一些磁盘数据结构，比如空间分配表，inode表之类的；但是DiskFS并不做数据的cache。
+
+一个oplog层来实现2层之间的交互，他主要做以下事情：
+
