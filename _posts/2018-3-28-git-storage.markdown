@@ -186,3 +186,5 @@ $ git cat-file -p d8329fc1cc938780ffdd9f94e0d364e0ea74f579
 100644 blob 83baae61804e65cc73a7201a7252750c76066a30	test.txt # tree对象的内容
 ```
 
+- 从blob对象和tree对象来看，在一个镜像仓库的早期，在本地文件系统中都是以小文件的方式存储（几十字节到KB级别），文件名为hash值
+
