@@ -1,0 +1,96 @@
+---
+layout: default
+title:  "FedCFS分析"
+date:   2018-01-21
+categories: file system
+---
+
+由于多地各处的各种NAS难以统一管理，所有不少关于文件系统统一管理的Idea出来，今天简单分析下，方便未来文件系统的扩展。
+
+## 1. 背景
+
+对于一些组织来说，很多时候业务是分布到全球各地的，存储也是，但是从使用方便的角度来说，有希望所有的存储都在一个统一的名字空间中，随时互通访问。但是现实情况是，各个地域的存储非常难以统一管理，一般都是一个个孤岛；于是中间就有了个GAP，见下图。
+
+![]({{ site.baseurl }}/assets/fedfs-1.png)
+
+既然有需求，我们就应该想办法解决吧，于是NFS标准组织就提出了这个FedFS的概念，也就是联邦文件系统，顾名思义就是将各地文件系统组织成一个大的联邦，方便用户使用和管理。
+
+总体思路如下图：
+
+![]({{ site.baseurl }}/assets/fedfs-2.png)
+
+核心要点：
+
+- 全局统一名字空间
+- 由各地的多个NAS server组成
+- 与协议无关
+- 能直接构建在现有的NFS/CIFS之上
+
+核心技术名词：
+
+- NSDB：名字空间数据库（LDAP）
+- FILESET：目录树的一部分（数据单元）
+- JUNCTIONS： 挂载点
+- FSL：记录文件系统的位置信息
+
+### 1.1 FedCFS
+由于云的快速发展，FedFS又扩展到了云上，称为Fed Cloud File system：
+
+- 组织机构会使用各种云，也会使用自己的数据中心，需要针对混合云的联邦文件系统
+- 全局名字空间：组织需要通过一个名字空间看到分散到各地的数据
+- 技术上可以通过扩展FedFS来实现
+
+![]({{ site.baseurl }}/assets/fedfs-3.png)
+
+## 2. 架构
+
+FedCFS的总体需要做的事情：
+
+- 将各个云的数据组成一个全局统一名字空间
+- 支持云上的对象存储
+- 提供分布式文件服务
+- 数据通过Filesets的方式组织（目录子树）
+- 支持各个协议的访问
+- 支撑复制方式实现HA
+- 名字空间在server侧呈现
+- 缓存数据，实现本地化的性能（lease机制）
+- 统一后端对各家云的接口
+- 很容易往后端添加新的file server
+- 对于NFS和CIFS客户端透明
+
+![]({{ site.baseurl }}/assets/fedfs-4.png)
+
+### 2.1 Filesets
+
+Filesets包括以下概念：
+
+- Fileset：
+  - 一个代表目录子树的逻辑实体
+  - 能够从一个多个server访问
+  - 通过一个唯一UUID或者FSN来访问
+- Fileset Location（FSL）
+  - 云对象存储（云上的数据容器）
+  - 包括primary和secondary位置（primary可以读写，secondary只读；2者可以在不同的云上）
+  - 也能是一个目录的地址
+- Fileset Migration/Replication
+  - Fileset有一个或者多个位置（不同的云上）
+  - Fileset能够在云间迁移和复制
+
+![]({{ site.baseurl }}/assets/fedfs-5.png)
+
+- Fileset in cloud
+  - 通过container或者bucket来表示一个云上的Fileset
+- Cloud Object：fileset中的对象
+  - 目录：包含目录项信息的对象
+  - 文件：包含文件数据信息的对象，或者包含extents信息
+  - extents：大文件需要切割成extents来管理
+  - Junctions：用来存放挂载点的FSN对象
+  - file group：用来存放一组文件的对象（小文件）
+- root fileset
+  - 将各个不同的子名字空间组成一个统一的大名字空间
+  - 只读（只能通过管理命令修改）
+  - 包括NSDB，存放filesets，domain，junctions信息等
+
+![]({{ site.baseurl }}/assets/fedfs-6.png)
+
+### 2.2 全局名字空间
