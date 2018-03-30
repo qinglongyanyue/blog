@@ -188,3 +188,29 @@ $ git cat-file -p d8329fc1cc938780ffdd9f94e0d364e0ea74f579
 
 - 从blob对象和tree对象来看，在一个镜像仓库的早期，在本地文件系统中都是以小文件的方式存储（几十字节到KB级别），文件名为hash值
 
+### commit对象
+
+- 上面可以看到，不容的git文件系统树可以用不容的根来描述，但是由于tree对象都是用hash值来标记，人工太难记住和操作。commit对象就是用来保存不容快照目录树的根的。
+
+![](http://git-scm.com/figures/18333fig0903-tn.png)
+
+```
+$ echo 'first commit' | git commit-tree d8329fc1cc938780ffdd9f94e0d364e0ea74f579 #创建一个commit对象
+fdf4fc3344e67ab068f836878b6c4951e3b15f3d
+
+>git cat-file -p 3c7898e2f1bef5b372b58db6440d2dcd7d9ba20b #查看这个提交对象
+tree d8329fc1cc938780ffdd9f94e0d364e0ea74f579
+author mingliang <sandpiper126@126.com> 1522422312 +0800
+committer mingliang <sandpiper126@126.com> 1522422312 +0800
+
+first commit
+```
+
+- commit对象也是对应盘上一个小文件，近路commit对应的message，commit对应的tree的key等信息
+
+至此，.git目录下objects目录中的所有内容分析完成，在项目初期，这个里面的内容都是一个个很小的文件，key为文件内容的hash，value根据对象的不容有不同，blob存放实际的代码内容，tree对象存放下一级tree或者blob的指针（目录项），commit以可读的文本记录提交信息，并指向对应的tree。
+
+### 对象的编码方式
+
+我们可以看到，直接cat文件只能看到乱码，是因为所有的内容都经过了git编码，需要使用git的命令才能读取出来。
+
