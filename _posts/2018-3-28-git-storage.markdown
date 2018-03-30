@@ -212,5 +212,26 @@ first commit
 
 ### 对象的编码方式
 
-我们可以看到，直接cat文件只能看到乱码，是因为所有的内容都经过了git编码，需要使用git的命令才能读取出来。
+- 我们可以看到，直接cat文件只能看到乱码，是因为所有的内容都经过了git编码，需要使用git的命令才能读取出来。
 
+- 编码方式如下：
+
+```
+>> content = "what is up, doc?" #假设的内容
+>> header = "blob #{content.length}\0"
+=> "blob 16\000" # 得到content的头部
+
+>> store = header + content # 存储的内容就是头部 + 内容
+=> "blob 16\000what is up, doc?"
+
+>> sha1 = Digest::SHA1.hexdigest(store) # 计算存储内容的key
+=> "bd9dbf5aae1a3862dd1526723246b20206e5fc37"
+
+>> zlib_content = Zlib::Deflate.deflate(store) #将存储的内容通过zlib压缩
+=> "x\234K\312\311OR04c(\317H,Q\310,V(-\320QH\311O\266\a\000_\034\a\235"
+
+>> path = '.git/objects/' + sha1[0,2] + '/' + sha1[2,38] # 用hash key的前2位来做目录（防止单个目录太大），后36位用来做文件名
+=> ".git/objects/bd/9dbf5aae1a3862dd1526723246b20206e5fc37" # 也就是.git中objects路径下的东东了
+
+将zlib_content存储到这个文件即可，读取的时候通过key找到文件，读取出来解压即可。
+```
