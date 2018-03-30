@@ -217,7 +217,7 @@ first commit
 - 编码方式如下：
 
 ```
->> content = "what is up, doc?" #假设的内容
+>> content = "what is up, doc?" #假设代码文件（blob）的内容
 >> header = "blob #{content.length}\0"
 => "blob 16\000" # 得到content的头部
 
