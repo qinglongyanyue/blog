@@ -1,6 +1,6 @@
 ---
 layout: default
-title:  "git存储原理"
+title:  "git存储原理--git中的对象布局"
 date:   2018-03-28
 categories: file system
 ---
@@ -240,6 +240,6 @@ first commit
 
 本文简单分析了git的整个对象类型，和存储方式，如果一直这么存储下去，git仓库将会有海量的小文件，但是实际上，我们打开一个大型项目的git仓库时，.git下的内容并没有海量的小文件啊，这是为何？且听下回分解。
 
-- 一个实际项目的.git objects情况
+- 一个实际项目的.git objects情况,只有一个index文件和一个pack文件
 
 ![]({{ site.baseurl }}/assets/gitstore-2.png)
