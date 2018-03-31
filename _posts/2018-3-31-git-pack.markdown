@@ -1,0 +1,50 @@
+---
+layout: default
+title:  "git存储原理--git中的对象pack"
+date:   2018-03-28
+categories: file system
+---
+
+上一篇我们看到，初始的git仓库都是各种小文件，但是老的仓库却主要少量的几个文件，都是idx和pack的配对。
+
+为什么会这样呢？其实pack是多个小文件打包成的一个大文件，而idx就是pack文件的索引，记录了pack文件中的条目信息。
+
+## 打包的原因
+
+- 从前的分析可以看到，git存储是将内容计算hash，那么直接导致任何针对一个文件的小修改都会创建新的文件，比如针对一个100KB的文件，修改一行，存下去又是一个100KB的文件，很容易导致容量的爆炸，同时也会导致网络传输的数据量过大;
+- 这种直接按照内容hash作为key的存储模式在git中叫做loose模式，当版本中有太多的松散对象时，手动执行git gc，或者向远程仓库推送时，都只执行打包动作。通过打包动作，将2份几乎相同的内容只存储1份 + 一个差异信息。如果有多份也是类似的处理，1份全量，多个差异。
+- 打包的过程中会生成一个idx文件，这文件主要用来记录pack文件中的条目信息，包括key值，类型，长度，依赖的base对象的key等信息
+
+- 看看下面这个packfile的例子，idx文件中存放这些索引信息，第一列是key，第二列是类型，第三列是内容的长度，第六列只依赖的base对象的深度，比如最后那行，base对象又依赖于另一个base镜像，所以深度是2；第四是指在pack文件中的长度，第五列是在pack文件中的偏移地址，很容易就发现上一行第4和第5列之和正好等于下一行第5列，说明每个文件在packfile中都是紧密排放的。
+
+```
+$ git verify-pack -v .git/objects/pack/pack-b3de836568441629d260ae19c7c1c11fa8ce5a5e.pack
+200c8213bd227eed106fed7b168ac3dfd5257cc3 commit 263 184 12
+b8043e69c7af9925e3a52500ab26cc743ff5ef5f commit 458 293 196
+b268ea58184656aff6e933f19f32239092602a5d commit 232 163 489
+30e7261b0c4871f4f924bd92de0511e3e2f06aa1 commit 278 194 652
+89adc4b548996941a8ad925943852277aaec41c8 commit 251 174 846
+0bee0ab5eaa26a18486dcf11126a8e3c6ee0c8bd commit 269 184 1020
+afa6aaae2bb2481163ca9f6116aec86719695957 commit 298 207 1204
+07ebd246a136dc074e0bfdbbd3e24f7345b54f39 commit 233 163 1411
+f3f7619936a2264ac88ee1649107d5d0df0f8a31 commit 247 171 1574
+9a8a2efaac4210f522790863053f30e25b822876 commit 249 174 1745
+3d71259d2ee3ec7f1f80b7ed79429d3bda92ee6a commit 222 157 1919
+33a8962e32df97e3d4d9c188f0daf967d4977da7 commit 73 85 2076 1 3d71259d2ee3ec7f1f80b7ed79429d3bda92ee6a
+a6c45c1724ae18bbfe0ed5bf5b7eeb3637bbc6ab commit 342 235 2161
+3a024e2f731f30545af80bf9bb66501f9530e960 commit 65 75 2396 1 a6c45c1724ae18bbfe0ed5bf5b7eeb3637bbc6ab
+360617730b92b72b1f599391a46be736ca3a7d80 commit 266 184 2471
+3a9d2d6974acd98dab6f9e834f477b353c41295d commit 336 228 2655
+106aa1c02fa7f8e883837f270a606819fd8651bc commit 248 170 2883
+4b9aad61562afaa257bb4b0c3d26816545fd46c1 commit 266 179 3053
+200e279624a42905bed21c89139db6dd22f93610 commit 423 284 3232
+df084d8bce5c57acdebf0958bfdfa30b1e3f929c commit 60 73 3516 1 200e279624a42905bed21c89139db6dd22f93610
+5aecdc1eb6a499010defdd06889f3ffc559b7206 commit 60 73 3589 1 200e279624a42905bed21c89139db6dd22f93610
+165e1598a27169730804267c6d9705adee06aa00 commit 61 74 3662 1 200e279624a42905bed21c89139db6dd22f93610
+da3819b25efdfcec084abd524ab1e8611b427252 commit 59 72 3736 1 200e279624a42905bed21c89139db6dd22f93610
+be5d471b02b9ee56538c8dc04253ec7206a43971 commit 241 170 3808
+9e08d4ffcc8beb10dc6eaaa93cdbdb00cfc95be9 commit 58 70 3978 1 be5d471b02b9ee56538c8dc04253ec7206a43971
+eeac5890e8e6b7500c12ebd51af4f6c6be6f9ccc commit 12 23 4048 2 9e08d4ffcc8beb10dc6eaaa93cdbdb00cfc95be9
+```
+
+- [有一篇文献有一些分析](https://kennyballou.com/blog/2017/03/git-packfiles/)
