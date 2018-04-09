@@ -92,11 +92,32 @@ pack文件中的具体含义如下：
 
 1.1节简单描述了下git add，git commit的逻辑，commit之后调用git push会将commit的修改提交到远程仓库，主要是小文件的创建和写入动作。
 
-## 1.3 git clone
+## 1.3 git clone & fetch
 
 由于所有的更新git仓库都会记录，除了gc能稍微减缓一些空间压力之外，总体来看git仓库会随着时间推移持续长大。比如我们的linux仓库，持续这么多年的持续更新，当前已经提交接近75万次，那么这个仓库有多大呢？
 
 我刚才git clone试验了下，一个多小时大约就下载了10%左右，全部clone完成预计需要一个晚上，数据量应该有几个GB了。那么clone动作如何执行的呢？
+
+- 首先到仓库获取 info/refs文件，里面存放了每个分支指针，比如master分支，develop分支，包括打的tags
+
+```
+登录后台仓库
+cat info/refs
+830f09e72a1cb81d2c50d0db005d51308c2c181c	refs/heads/master
+d7a83b3f7fd35c34b3fa446e33afdfe2625c260c	refs/heads/develop
+d7a83b3f7fd35c34b3fa446e33afdfe2625c260c	refs/tags/1.0
+```
+
+- 根据refs信息获取master的commit的key，根据key拉取对象，如果对象不存在，直接拉取idx文件和pack文件
+- 下载完成之后，把master分支内容在本地解析出来放入本地文件系统中，也就是我们能看懂的源码目录了
+- 以同样的方式继续下载其他分支的内容
+
+fetch的时候略有不同：
+
+- 首先到server侧获取对应分支的最新提交信息，与本地的对比
+- 如果发现有更新的提交，直接读取更新的内容到本地
+
+基本可见，git clone和fetch不太相同，一般大型的仓库来说，git clone更多的是相对较大的pack文件的读取，而git fetch则是小文件的读取动作。
 
 # 2. 如何为git仓库设计存储
 
