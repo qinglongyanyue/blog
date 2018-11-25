@@ -1,3 +1,10 @@
+---
+layout: default
+title:  "Cornell大学derecho通信框架测试"
+date:   2018-09-04
+categories: filesystem
+---
+
 # Cornell大学derecho通信框架测试
 
 ## 项目地址
@@ -79,3 +86,4 @@ Please enter IP Address for node 1: 192.168.0.181
 
 # cat data_derecho_bw #查看结果
 ```
+
